@@ -8,4 +8,5 @@ public class Constants {
     public static final String TAG_ANDROID_HTTP_REQUEST = "Android HTTP request";
     public static final String DEFAULT_ENCODING_ANDROID_HTTP_REQUEST = "UTF-8";
     public static final int DEFAULT_TIMEOUT = 15000;
+    public static final String METHOD_POST = "POST";
 }

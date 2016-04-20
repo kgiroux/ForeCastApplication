@@ -4,11 +4,4 @@
     android:id="@+id/container"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="com.giroux.kevin.forecastapplication.MainActivity$PlaceHolderFragment">
-    <TextView
-        android:text="toto"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/text"/>
-</FrameLayout>
+    android:paddingTop="@dimen/activity_vertical_margin" />
