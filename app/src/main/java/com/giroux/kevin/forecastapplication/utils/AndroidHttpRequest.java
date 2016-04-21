@@ -36,7 +36,7 @@ import java.util.Map;
  */
 public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
 
-    private boolean isJSON;
+    private boolean JSON;
     private String encoding;
     private Object object;
     private int timeout;
@@ -56,7 +56,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     }
 
     public void setJSON(boolean JSON) {
-        isJSON = JSON;
+        this.JSON = JSON;
     }
 
     public String getEncoding() {
@@ -95,6 +95,14 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
         this.method = method;
     }
 
+    public boolean isJSON() {
+        return JSON;
+    }
+
+    public String getParamStr() {
+        return paramStr;
+    }
+    
     /**
      * Method with all available parameter
      *
@@ -127,34 +135,31 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
      * @param paramStr list of parameter. Use createParamString static method for generate this paramter
      */
     public AndroidHttpRequest(String url, String method, Map<String, String> paramStr) {
-        this.url = url;
-        this.method = method;
-        this.isJSON = true;
+        this.url = (url);
+        this.method = (method);
+        this.JSON = true;
         this.encoding = Constants.DEFAULT_ENCODING_ANDROID_HTTP_REQUEST;
-        this.setTimeout(Constants.DEFAULT_TIMEOUT);
-        this.setObject(null);
-        this.setListUiUpdate(new HashMap<String,Object>());
-        this.setListParam(paramStr);
+        this.timeout = Constants.DEFAULT_TIMEOUT;
+        this.object = (null);
+        this.listUiUpdate = new HashMap<>();
+        this.listParam = (paramStr);
         builderURL = new Uri.Builder();
     }
 
     @Override
     protected Object doInBackground(String[]... params) {
-
-        return executeRequest(createParamString(this.getListParam()), this.method, this.isJSON, this.encoding, this.timeout);
+        return executeRequest(createParamString(this.getListParam()));
     }
+
+
 
     /**
      * Method that perform the request
      *
      * @param uri      url for the request
-     * @param method   method for the request
-     * @param isJSON   if it is json
-     * @param encoding UTF-8 by default. Can be change with the setEncoding method
-     * @param timeout  15 second by default Can be change with the setTimeout method
      * @return Object
      */
-    private Object executeRequest(Uri uri, String method, boolean isJSON, String encoding, int timeout) {
+    private Object executeRequest(Uri uri) {
 
         Log.d(Constants.TAG_ANDROID_HTTP_REQUEST, "executeRequest: perform a request");
         displayParamaterForTheRequest();
@@ -166,28 +171,28 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
         try {
             //Création de la connexion et de l'url de la requête
             url = new URL(uri.toString());
-            this.url = new URL(uri.toString()).toString();
+            this.setUrl(new URL(uri.toString()).toString());
             urlConnection = (HttpURLConnection) url.openConnection();
 
             //Définition des paramètres de connexion
-            urlConnection.setReadTimeout(timeout);
-            urlConnection.setConnectTimeout(timeout);
+            urlConnection.setReadTimeout(this.timeout);
+            urlConnection.setConnectTimeout(this.timeout);
             urlConnection.setDoInput(true);
 
             //Send parameters
-            urlConnection.setRequestMethod(method);
-            if (isJSON)
-                urlConnection.setRequestProperty("Content-Type", "application/json; " + encoding);
+            urlConnection.setRequestMethod(this.method);
+            if (this.JSON)
+                urlConnection.setRequestProperty("Content-Type", "application/json; " + this.encoding);
             else
-                urlConnection.setRequestProperty("Content-Type", "text; " + encoding);
+                urlConnection.setRequestProperty("Content-Type", "text; " + this.encoding);
 
 
-            if (this.getMethod().equals(Constants.METHOD_POST)) {
+            if (this.method.equals(Constants.METHOD_POST)) {
                 urlConnection.setDoOutput(true);
-                if (paramStr != null) {
+                if (this.getParamStr() != null) {
                     os = urlConnection.getOutputStream();
-                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, encoding));
-                    writer.write(paramStr);
+                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, this.encoding));
+                    writer.write(this.getParamStr());
                     writer.flush();
                     writer.close();
                     os.close();
@@ -268,7 +273,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     @Override
     public String toString() {
         return "AndroidHttpRequest{" +
-                "isJSON=" + isJSON +
+                "isJSON=" + JSON +
                 ", encoding='" + encoding + '\'' +
                 ", object=" + object +
                 ", timeout=" + timeout +
@@ -280,7 +285,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
 
     public void displayParamaterForTheRequest() {
         String toDisplay = "AndroidHttpRequest : " +
-                "\nJSON activated : " + isJSON +
+                "\nJSON activated : " + JSON +
                 ", \nencoding : '" + encoding + '\'' +
                 ", \nUI object : " + object +
                 ", \nTimeout : " + timeout +
@@ -352,7 +357,6 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
         for (Map.Entry<String, String> entrySet : listParam.entrySet()) {
             builderURL.appendQueryParameter(entrySet.getKey(), entrySet.getValue()).build();
         }
-
         if (this.getMethod().equals(Constants.METHOD_POST)) {
             this.paramStr = builderURL.build().getEncodedQuery();
         } else {
@@ -389,11 +393,11 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
         ArrayList<String> listWeather = new ArrayList<>();
         GregorianCalendar gregorianCalendar = new GregorianCalendar();
         if (object.has("list")) {
-            JSONArray arrayJson = null;
+            JSONArray arrayJson;
             try {
                 arrayJson = object.getJSONArray("list");
                 String description = "";
-                String day = "";
+                String day;
                 Double max = 0.0;
                 Double min = 0.0;
                 for (int i = 0; i < arrayJson.length(); i++) {
@@ -413,9 +417,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-
         }
-
         return listWeather;
     }
 
