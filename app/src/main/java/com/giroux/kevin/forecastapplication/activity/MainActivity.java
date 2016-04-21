@@ -1,4 +1,4 @@
-package com.giroux.kevin.forecastapplication;
+package com.giroux.kevin.forecastapplication.activity;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -13,6 +13,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.giroux.kevin.forecastapplication.R;
 import com.giroux.kevin.forecastapplication.utils.AndroidHttpRequest;
 import com.giroux.kevin.forecastapplication.utils.Fragment.ForecastFragment;
 

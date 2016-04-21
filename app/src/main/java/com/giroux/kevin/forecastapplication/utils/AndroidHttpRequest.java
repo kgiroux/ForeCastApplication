@@ -4,7 +4,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.util.Log;
-import android.widget.TextView;
+import android.widget.ArrayAdapter;
 
 import com.giroux.kevin.forecastapplication.utils.constants.Constants;
 
@@ -22,8 +22,13 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -246,22 +251,17 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void onPostExecute(Object result) {
-        if (result instanceof JSONObject) {
-            JSONObject resultFrom = (JSONObject) result;
-            if (resultFrom.has("city")) {
-                if (resultFrom.has("list")) {
-                    try {
-                        if (this.getObject() instanceof TextView) {
-                            Log.d(Constants.TAG_ANDROID_HTTP_REQUEST, String.valueOf(this.getObject().getClass()));
-                            TextView textView = (TextView) this.getObject();
-                            textView.setText(((resultFrom.getJSONObject("city")).getString("name")));
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
+
+        List<String> listWeather = getWeatherDataFromJson((JSONObject) result);
+        if (this.getObject() instanceof ArrayAdapter<?>) {
+            ArrayAdapter<String> adapter = (ArrayAdapter<String>) this.getObject();
+            if (adapter != null) {
+                adapter.clear();
+                adapter.addAll(listWeather);
             }
+
         }
     }
 
@@ -385,10 +385,42 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     }
 
 
+    private ArrayList<String> getWeatherDataFromJson(JSONObject object) {
+        ArrayList<String> listWeather = new ArrayList<>();
+        GregorianCalendar gregorianCalendar = new GregorianCalendar();
+        if (object.has("list")) {
+            JSONArray arrayJson = null;
+            try {
+                arrayJson = object.getJSONArray("list");
+                String description = "";
+                String day = "";
+                Double max = 0.0;
+                Double min = 0.0;
+                for (int i = 0; i < arrayJson.length(); i++) {
+                    JSONObject temp = arrayJson.getJSONObject(i);
+                    gregorianCalendar.add(GregorianCalendar.DAY_OF_YEAR, 1);
+                    day = getDayReadable(gregorianCalendar.getTime());
+                    if (temp.has("weather"))
+                        description = temp.getJSONArray("weather").getJSONObject(0).getString("description");
+                    if (temp.has("temp") && temp.getJSONObject("temp").has("max") && temp.getJSONObject("temp").has("min")) {
+                        max = temp.getJSONObject("temp").getDouble("max");
+                        min = temp.getJSONObject("temp").getDouble("min");
+                    }
 
-    private ArrayList<String> getWeatherDataFromJson(JSONObject object, int numDays){
-        
+                    String toStore = day + " " + description + " " + String.valueOf(min) + " / " + String.valueOf(max);
+                    listWeather.add(toStore);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
 
-        return new ArrayList<String>();
+        }
+
+        return listWeather;
+    }
+
+    private String getDayReadable(Date time) {
+        SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd", Locale.FRANCE);
+        return shortenedDateFormat.format(time);
     }
 }
