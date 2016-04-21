@@ -8,18 +8,21 @@ import android.widget.TextView;
 
 import com.giroux.kevin.forecastapplication.utils.constants.Constants;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -63,24 +66,12 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
         this.object = object;
     }
 
-    public int getTimeout() {
-        return timeout;
-    }
-
     public void setTimeout(int timeout) {
         this.timeout = timeout;
     }
 
-    public Map<String, Object> getListUiUpdate() {
-        return listUiUpdate;
-    }
-
     public void setListUiUpdate(Map<String, Object> listUiUpdate) {
         this.listUiUpdate = listUiUpdate;
-    }
-
-    public boolean isJSON() {
-        return isJSON;
     }
 
     public Object getObject() {
@@ -89,6 +80,14 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
 
     public String getUrl() {
         return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public void setMethod(String method) {
+        this.method = method;
     }
 
     /**
@@ -103,14 +102,14 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
      * @param paramStr list of parameter Use createParamString static method for generate this paramter
      */
     public AndroidHttpRequest(boolean isJSON, String encoding, Object object, int timeout, String url, String method, Map<String, String> paramStr) {
-        this.isJSON = isJSON;
-        this.encoding = encoding;
-        this.object = object;
-        this.timeout = timeout;
-        this.url = url;
-        this.method = method;
-        this.listUiUpdate = new HashMap<>();
-        this.listParam = paramStr;
+        this.setJSON(isJSON);
+        this.setEncoding(encoding);
+        this.setObject(object);
+        this.setTimeout(timeout);
+        this.setUrl(url);
+        this.setMethod(method);
+        this.setListParam(paramStr);
+        this.setListUiUpdate(new HashMap<String,Object>());
         builderURL = new Uri.Builder();
     }
 
@@ -127,10 +126,10 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
         this.method = method;
         this.isJSON = true;
         this.encoding = Constants.DEFAULT_ENCODING_ANDROID_HTTP_REQUEST;
-        this.timeout = Constants.DEFAULT_TIMEOUT;
-        this.object = null;
-        this.listUiUpdate = new HashMap<>();
-        this.listParam = paramStr;
+        this.setTimeout(Constants.DEFAULT_TIMEOUT);
+        this.setObject(null);
+        this.setListUiUpdate(new HashMap<String,Object>());
+        this.setListParam(paramStr);
         builderURL = new Uri.Builder();
     }
 
@@ -156,18 +155,13 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
         displayParamaterForTheRequest();
         URL url;
         HttpURLConnection urlConnection = null;
-        String str;
         JSONObject json = null;
         OutputStream os;
-        InputStream in;
-
 
         try {
-            //Envoie des paramètre dans la requête au serveur
-            //if ("POST".equals(method) && builderURL != null) {
-            //Création de la connection et de l'url de la requête
+            //Création de la connexion et de l'url de la requête
             url = new URL(uri.toString());
-
+            this.url = new URL(uri.toString()).toString();
             urlConnection = (HttpURLConnection) url.openConnection();
 
             //Définition des paramètres de connexion
@@ -182,6 +176,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
             else
                 urlConnection.setRequestProperty("Content-Type", "text; " + encoding);
 
+
             if (this.getMethod().equals(Constants.METHOD_POST)) {
                 urlConnection.setDoOutput(true);
                 if (paramStr != null) {
@@ -193,20 +188,59 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
                     os.close();
                 }
             }
-
             //Récupération des iformations de retour du serveur
             urlConnection.connect();
-            in = new BufferedInputStream(urlConnection.getInputStream());
-            str = streamToString(in);
-            in.close();
-
-            json = new JSONObject(str);
-
-        } catch (Exception ex) {
+            json = performedCheckCodeMessage(urlConnection);
+        } catch (IOException | JSONException ex ) {
             Log.e(Constants.TAG_ANDROID_HTTP_REQUEST, "Error decoding stream", ex);
         } finally {
             if (urlConnection != null)
                 urlConnection.disconnect();
+        }
+        return json;
+    }
+
+    private JSONObject performedCheckCodeMessage(HttpURLConnection urlConnection) throws IOException, JSONException{
+        InputStream in;
+        String str;
+        JSONObject json = new JSONObject();
+        switch(urlConnection.getResponseCode()){
+            //200
+            case HttpURLConnection.HTTP_OK :
+
+                Log.e(Constants.TAG_ANDROID_HTTP_REQUEST," Response OK");
+                in = new BufferedInputStream(urlConnection.getInputStream());
+                str = streamToString(in);
+                in.close();
+                json = new JSONObject(str);
+                break;
+            // 204
+            case HttpURLConnection.HTTP_NO_CONTENT:
+                Log.d(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_NO_CONTENT));
+                break;
+            // 400
+            case HttpURLConnection.HTTP_BAD_REQUEST :
+                break;
+            // 405
+            case HttpURLConnection.HTTP_BAD_METHOD :
+                Log.d(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_BAD_REQUEST, url, this.method));
+                break;
+            // 408
+            case HttpURLConnection.HTTP_CLIENT_TIMEOUT :
+                // Retry the request
+                urlConnection.disconnect();
+                urlConnection.connect();
+                if(urlConnection.getResponseCode() != HttpURLConnection.HTTP_OK){
+                    Log.e(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_TIMEOUT, url,this.paramStr));
+                }
+                break;
+            // 500
+            case HttpURLConnection.HTTP_INTERNAL_ERROR :
+                Log.e(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_INTERNAL_ERROR, url,this.paramStr));
+                break;
+            default :
+                Log.e(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_OTHER_ERROR, String.valueOf(urlConnection.getResponseCode())));
+                break;
         }
         return json;
     }
@@ -322,6 +356,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
         if (this.getMethod().equals(Constants.METHOD_POST)) {
             this.paramStr = builderURL.build().getEncodedQuery();
         } else {
+            this.paramStr = builderURL.build().getEncodedQuery();
             url = builderURL.build();
         }
         return url;
@@ -347,5 +382,13 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
             Log.e(Constants.TAG_ANDROID_HTTP_REQUEST, "Error decoding stream", ex);
         }
         return strb.toString();
+    }
+
+
+
+    private ArrayList<String> getWeatherDataFromJson(JSONObject object, int numDays){
+        
+
+        return new ArrayList<String>();
     }
 }
