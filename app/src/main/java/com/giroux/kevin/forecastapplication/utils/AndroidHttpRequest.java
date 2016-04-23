@@ -102,7 +102,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     public String getParamStr() {
         return paramStr;
     }
-    
+
     /**
      * Method with all available parameter
      *
@@ -230,10 +230,14 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
                 break;
             // 400
             case HttpURLConnection.HTTP_BAD_REQUEST :
+                Log.e(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_BAD_REQUEST,url ,this.method));
+                break;
+            case HttpURLConnection.HTTP_NOT_FOUND :
+                Log.e(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_NO_FOUND,url,this.paramStr,this.method));
                 break;
             // 405
             case HttpURLConnection.HTTP_BAD_METHOD :
-                Log.d(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_BAD_REQUEST, url, this.method));
+                Log.d(Constants.TAG_ANDROID_HTTP_REQUEST,Constants.createLog(Constants.CST_BAD_METHOD, url, this.method));
                 break;
             // 408
             case HttpURLConnection.HTTP_CLIENT_TIMEOUT :
@@ -352,16 +356,29 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
 
     private Uri createParamString(Map<String, String> listParam) {
         Uri url = Uri.parse(this.getUrl());
-        builderURL.scheme(url.getScheme()).authority(url.getAuthority()).appendEncodedPath(url.getPath());
+        JSONObject object = new JSONObject();
+        builderURL.scheme(url.getScheme()).appendEncodedPath(url.getPath());
+        if(this.isJSON()){
+            try{
 
-        for (Map.Entry<String, String> entrySet : listParam.entrySet()) {
-            builderURL.appendQueryParameter(entrySet.getKey(), entrySet.getValue()).build();
+                for(Map.Entry<String,String> entrySet : listParam.entrySet()){
+                    object.put(entrySet.getKey(),entrySet.getValue());
+                }
+                this.paramStr = object.toString();
+            }catch(JSONException ex){
+                Log.e(Constants.TAG_ANDROID_HTTP_REQUEST,"Error during rendering JSON",ex);
+            }
+        }else{
+            for (Map.Entry<String, String> entrySet : listParam.entrySet()) {
+                builderURL.appendQueryParameter(entrySet.getKey(), entrySet.getValue()).build();
+            }
+
         }
-        if (this.getMethod().equals(Constants.METHOD_POST)) {
-            this.paramStr = builderURL.build().getEncodedQuery();
-        } else {
-            this.paramStr = builderURL.build().getEncodedQuery();
-            url = builderURL.build();
+        if (this.getMethod().equals(Constants.METHOD_POST) && !this.isJSON()) {
+            this.paramStr = builderURL.build().getQuery();
+        } else if(!this.isJSON()){
+            this.paramStr = builderURL.build().getQuery();
+            url = builderURL.authority(url.getAuthority()).build();
         }
         return url;
     }
