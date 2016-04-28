@@ -29,6 +29,15 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.giroux.kevin.forecastapplication.activity.MainActivity" />
         </activity>
+        <activity
+            android:name=".activity.SettingsActivity"
+            android:label="@string/title_activity_settings"
+            android:theme="@style/AppTheme"
+            android:parentActivityName=".activity.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.giroux.kevin.forecastapplication.activity.MainActivity" />
+        </activity>
     </application>
 
 </manifest>

@@ -1,15 +1,17 @@
 package com.giroux.kevin.forecastapplication.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.ShareActionProvider;
 import android.view.Menu;
 import android.view.MenuItem;
 
 import com.giroux.kevin.forecastapplication.R;
-import com.giroux.kevin.forecastapplication.utils.Fragment.DetailActivityFragment;
+import com.giroux.kevin.forecastapplication.Fragment.DetailActivityFragment;
 
 public class DetailActivity extends AppCompatActivity {
-
+    private ShareActionProvider mShareActionProvider;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -23,8 +25,7 @@ public class DetailActivity extends AppCompatActivity {
 
     }
 
-
-    @Override
+    /*@Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.detail, menu);
@@ -40,10 +41,12 @@ public class DetailActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
             return true;
         }
 
         return super.onOptionsItemSelected(item);
-    }
+    }*/
+
 
 }

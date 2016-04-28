@@ -1,18 +1,10 @@
-package com.giroux.kevin.forecastapplication.utils;
+package com.giroux.kevin.androidhttprequestlibrairy;
 
-import android.app.Activity;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.util.Log;
-import android.widget.ArrayAdapter;
 
-import com.giroux.kevin.forecastapplication.R;
-import com.giroux.kevin.forecastapplication.utils.constants.Constants;
-
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -26,13 +18,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -266,21 +252,6 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    protected void onPostExecute(Object result) {
-
-        List<String> listWeather = getWeatherDataFromJson((JSONObject) result);
-
-        if (this.listUiUpdate.get("adapter") instanceof ArrayAdapter<?>) {
-            ArrayAdapter<String> adapter = (ArrayAdapter<String>) this.listUiUpdate.get("adapter");
-            if (adapter != null) {
-                adapter.clear();
-                adapter.addAll(listWeather);
-            }
-        }
-    }
-
-    @Override
     public String toString() {
         return "AndroidHttpRequest{" +
                 "isJSON=" + JSON +
@@ -313,46 +284,6 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
      */
     public void addUIObjectToUpdate(String key, Object value) {
         this.listUiUpdate.put(key, value);
-    }
-
-    /**
-     * Method that can help user to create a string for parameter
-     *
-     * @param params Map with list of parameter and the key for the request
-     * @param isJson if it is json
-     * @return list of paramater in String
-     */
-    @Deprecated
-    public static String createParamString(Map<String, String> params, boolean isJson) {
-        JSONObject result = new JSONObject();
-        StringBuilder toSendGet = new StringBuilder();
-        boolean isFirst = true;
-
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            //Si premier element ne pas ajouter le signe &
-            if (!isFirst && !isJson)
-                toSendGet.append("&");
-            else
-                isFirst = false;
-            //Encodage des informations du paramètre en UTF (clé, valeur)
-            try {
-                if (isJson)
-                    result.put(entry.getKey(), entry.getValue());
-                else {
-                    toSendGet.append(entry.getKey());
-                    toSendGet.append("=");
-                    String textTOGet = entry.getValue();
-                    toSendGet.append(textTOGet);
-                }
-            } catch (Exception ex) {
-                Log.e(Constants.TAG_ANDROID_HTTP_REQUEST, "Create Param :", ex);
-            }
-        }
-        if (isJson) {
-            return result.toString();
-        } else {
-            return toSendGet.toString();
-        }
     }
 
 
@@ -409,66 +340,5 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
             Log.e(Constants.TAG_ANDROID_HTTP_REQUEST, "Error decoding stream", ex);
         }
         return strb.toString();
-    }
-
-
-    private ArrayList<String> getWeatherDataFromJson(JSONObject object) {
-        ArrayList<String> listWeather = new ArrayList<>();
-        GregorianCalendar gregorianCalendar = new GregorianCalendar();
-        if (object.has("list")) {
-            JSONArray arrayJson;
-            try {
-                arrayJson = object.getJSONArray("list");
-                String description = "";
-                String day;
-                Double max = 0.0;
-                Double min = 0.0;
-                for (int i = 0; i < arrayJson.length(); i++) {
-                    JSONObject temp = arrayJson.getJSONObject(i);
-                    gregorianCalendar.add(GregorianCalendar.DAY_OF_YEAR, 1);
-                    day = getDayReadable(gregorianCalendar.getTime());
-                    if (temp.has("weather"))
-                        description = temp.getJSONArray("weather").getJSONObject(0).getString("description");
-                    if (temp.has("temp") && temp.getJSONObject("temp").has("max") && temp.getJSONObject("temp").has("min")) {
-                        max = temp.getJSONObject("temp").getDouble("max");
-                        min = temp.getJSONObject("temp").getDouble("min");
-                    }
-
-                    SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(((Activity)this.getObject()).getApplicationContext());
-                                String unitType = sharedPrefs.getString(
-                                        ((Activity)this.getObject()).getString(R.string.pref_units_key),
-                                        ((Activity)this.getObject()).getString(R.string.pref_units_metric));
-
-                    formatHighLows(max,min,unitType);
-                    String toStore = day + " " + description + " " + formatHighLows(max,min,unitType);;
-                    listWeather.add(toStore);
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-        return listWeather;
-    }
-
-    private String formatHighLows(double high, double low, String unitType) {
-
-        if (unitType.equals(((Activity)this.getObject()).getString(R.string.pref_units_imperial))) {
-            high = (high * 1.8) + 32;
-            low = (low * 1.8) + 32;
-        } else if (!unitType.equals(((Activity)this.getObject()).getString(R.string.pref_units_metric))) {
-            Log.d(Constants.TAG_ANDROID_HTTP_REQUEST, "Unit type not found: " + unitType);
-        }
-
-        // For presentation, assume the user doesn't care about tenths of a degree.
-        long roundedHigh = Math.round(high);
-        long roundedLow = Math.round(low);
-
-        return roundedHigh + "/" + roundedLow;
-    }
-
-
-    private String getDayReadable(Date time) {
-        SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd", Locale.FRANCE);
-        return shortenedDateFormat.format(time);
     }
 }

@@ -1,7 +1,9 @@
-package com.giroux.kevin.forecastapplication.utils.Fragment;
+package com.giroux.kevin.forecastapplication.Fragment;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -17,6 +19,8 @@ import android.widget.Toast;
 
 import com.giroux.kevin.forecastapplication.R;
 import com.giroux.kevin.forecastapplication.activity.DetailActivity;
+import com.giroux.kevin.forecastapplication.activity.MainActivity;
+import com.giroux.kevin.forecastapplication.activity.SettingsActivity;
 import com.giroux.kevin.forecastapplication.utils.AndroidHttpRequest;
 
 import java.util.ArrayList;
@@ -28,6 +32,7 @@ import java.util.Map;
  */
 public class ForecastFragment extends Fragment {
     private ArrayAdapter<String> adapter;
+    private ListView listViewForecast;
     public ForecastFragment(){
 
     }
@@ -48,7 +53,7 @@ public class ForecastFragment extends Fragment {
         listForecast.add("Today 43 °C / 80 17");
 
         adapter = new ArrayAdapter<>(getActivity(), R.layout.list_item_forecast, R.id.list_item_forecast_textview, listForecast);
-        ListView listViewForecast = (ListView) rootView.findViewById(R.id.listview_forecast);
+        listViewForecast = (ListView) rootView.findViewById(R.id.listview_forecast);
         listViewForecast.setAdapter(adapter);
 
         listViewForecast.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -62,29 +67,47 @@ public class ForecastFragment extends Fragment {
         });
             //http://api.openweathermap.org/data/2.5/forecast/daily?id=6444066&mode=json&units=metric&cnt=7&appid=2320d97c0bd0642e83e5f485369f61a5
 
+        return rootView;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        initAsyncTask();
+    }
+
+    private void initAsyncTask(){
         String url = "http://api.openweathermap.org/data/2.5/forecast/daily";
         String method = "GET";
         String param = "id=6444066&mode=json&units=metric&cnt=7&appid=2320d97c0bd0642e83e5f485369f61a5";
 
+        //http://api.openweathermap.org/data/2.5/forecast?q=78210,fr&appid=2320d97c0bd0642e83e5f485369f61a5
+
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String zipCode = preferences.getString(getString(R.string.pref_key_location),getString(R.string.pref_value_location)) +",fr";
+
         Map<String,String> mapParam = new HashMap<>();
-        mapParam.put("id","6444066");
+        mapParam.put("q",zipCode);
         mapParam.put("mode","json");
         mapParam.put("units","metric");
         mapParam.put("cnt","7");
         mapParam.put("appid","2320d97c0bd0642e83e5f485369f61a5");
 
+        Map<String,Object> uiObject = new HashMap<>();
+        uiObject.put("adapter",adapter);
+
         AndroidHttpRequest androidHttpRequest = new AndroidHttpRequest(url,method,mapParam);
         androidHttpRequest.setEncoding("UTF-8");
-        androidHttpRequest.setJSON(true);
-        androidHttpRequest.setObject(adapter);
+        androidHttpRequest.setJSON(false);
+        androidHttpRequest.setListUiUpdate(uiObject);
+        androidHttpRequest.setObject(getActivity());
         androidHttpRequest.execute();
-
-        return rootView;
     }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
+       // super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.forecast_fragment_menu, menu);
 
     }
@@ -104,8 +127,11 @@ public class ForecastFragment extends Fragment {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (id == R.id.action_refresh) {
+            initAsyncTask();
+        }else if(id == R.id.action_settings){
+            Intent t = new Intent(getActivity(), SettingsActivity.class);
+            startActivity(t);
         }
 
         return super.onOptionsItemSelected(item);
