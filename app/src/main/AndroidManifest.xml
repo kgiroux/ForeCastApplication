@@ -38,6 +38,11 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.giroux.kevin.forecastapplication.activity.MainActivity" />
         </activity>
+        <provider
+                    android:authorities="com.giroux.kevin.forecastapplication"
+                    android:name=".data.WeatherProvider" />
+
+
     </application>
 
 </manifest>
