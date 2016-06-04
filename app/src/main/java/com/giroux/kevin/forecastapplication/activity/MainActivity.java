@@ -9,27 +9,28 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.TextView;
 
-import com.giroux.kevin.forecastapplication.R;
 import com.giroux.kevin.forecastapplication.Fragment.ForecastFragment;
+import com.giroux.kevin.forecastapplication.R;
+import com.giroux.kevin.forecastapplication.utils.Utility;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static TextView textView;
-
+    private String mLocation;
+    private String FORECASTFRAGMENT_TAG = "FORECASTFRAGEMENT_TAG";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new ForecastFragment())
+                    .add(R.id.container, new ForecastFragment(),FORECASTFRAGMENT_TAG)
                     .commit();
         }
+        mLocation = Utility.getPreferredLocation(getApplicationContext());
     }
 
-    @Override
+   @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -79,4 +80,15 @@ public class MainActivity extends AppCompatActivity {
             Log.d("MAIN ACTIVITY", "Couldn't call " + location + ", no receiving apps installed!");
         }
     }
- }
+
+    @Override
+    protected void onResume() {
+        if(!mLocation.equals(Utility.getPreferredLocation(getApplicationContext()))){
+            ForecastFragment ff = (ForecastFragment)getSupportFragmentManager().findFragmentByTag(FORECASTFRAGMENT_TAG);
+            ff.onLocationChange();
+            mLocation = Utility.getPreferredLocation(getApplicationContext());
+        }
+        super.onResume();
+
+    }
+}

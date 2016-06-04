@@ -1,7 +1,11 @@
 package com.giroux.kevin.forecastapplication.utils;
 
 import android.app.Activity;
+import android.content.ContentUris;
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
@@ -10,6 +14,7 @@ import android.util.Log;
 import android.widget.ArrayAdapter;
 
 import com.giroux.kevin.forecastapplication.R;
+import com.giroux.kevin.forecastapplication.data.WeatherContract;
 import com.giroux.kevin.forecastapplication.utils.constants.Constants;
 
 import org.json.JSONArray;
@@ -27,13 +32,11 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Vector;
 
 /**
  * Created by kevin on 18/04/2016. ForeCast Application
@@ -50,6 +53,12 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     private Map<String, String> listParam;
     private String paramStr;
     private Uri.Builder builderURL;
+
+    public void setmContext(Context mContext) {
+        this.mContext = mContext;
+    }
+
+    private  Context mContext;
 
     public Map<String, String> getListParam() {
         return listParam;
@@ -269,14 +278,10 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     @SuppressWarnings("unchecked")
     protected void onPostExecute(Object result) {
 
-        List<String> listWeather = getWeatherDataFromJson((JSONObject) result);
+        getWeatherDataFromJson((JSONObject) result);
 
         if (this.listUiUpdate.get("adapter") instanceof ArrayAdapter<?>) {
             ArrayAdapter<String> adapter = (ArrayAdapter<String>) this.listUiUpdate.get("adapter");
-            if (adapter != null) {
-                adapter.clear();
-                adapter.addAll(listWeather);
-            }
         }
     }
 
@@ -412,63 +417,130 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
     }
 
 
-    private ArrayList<String> getWeatherDataFromJson(JSONObject object) {
-        ArrayList<String> listWeather = new ArrayList<>();
+    private void getWeatherDataFromJson(JSONObject object) {
         GregorianCalendar gregorianCalendar = new GregorianCalendar();
+
         if (object.has("list")) {
             JSONArray arrayJson;
             try {
+                JSONObject cityList = object.getJSONObject("city");
                 arrayJson = object.getJSONArray("list");
                 String description = "";
                 String day;
                 Double max = 0.0;
                 Double min = 0.0;
+                Vector<ContentValues> cVVector = new Vector<>(arrayJson.length());
                 for (int i = 0; i < arrayJson.length(); i++) {
-                    JSONObject temp = arrayJson.getJSONObject(i);
-                    gregorianCalendar.add(GregorianCalendar.DAY_OF_YEAR, 1);
-                    day = getDayReadable(gregorianCalendar.getTime());
-                    if (temp.has("weather"))
-                        description = temp.getJSONArray("weather").getJSONObject(0).getString("description");
-                    if (temp.has("temp") && temp.getJSONObject("temp").has("max") && temp.getJSONObject("temp").has("min")) {
-                        max = temp.getJSONObject("temp").getDouble("max");
-                        min = temp.getJSONObject("temp").getDouble("min");
+                    JSONObject forcastObject = arrayJson.getJSONObject(i);
+                    gregorianCalendar.add(GregorianCalendar.DAY_OF_YEAR, 0);
+                    day = getDayReadable(gregorianCalendar.getTime().getTime());
+                    if (forcastObject.has("weather"))
+                        description = forcastObject.getJSONArray("weather").getJSONObject(0).getString("description");
+                    if (forcastObject.has("temp") && forcastObject.getJSONObject("temp").has("max") && forcastObject.getJSONObject("temp").has("min")) {
+                        max = forcastObject.getJSONObject("temp").getDouble("max");
+                        min = forcastObject.getJSONObject("temp").getDouble("min");
                     }
+                    Log.e("Test",forcastObject.toString());
+                    int humidity = forcastObject.getInt("humidity");
+                    int pressure = forcastObject.getInt("pressure");
+                    int windSpeed = forcastObject.getInt("speed");
+                    int windDirection = forcastObject.getInt("deg");
 
-                    SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(((Activity)this.getObject()).getApplicationContext());
-                                String unitType = sharedPrefs.getString(
-                                        ((Activity)this.getObject()).getString(R.string.pref_units_key),
-                                        ((Activity)this.getObject()).getString(R.string.pref_units_metric));
+                    SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(((Activity)this.getObject()).getApplicationContext());    
+                    String locationSetting = sharedPrefs.getString(((Activity)this.getObject()).getString(R.string.pref_key_location),((Activity)this.getObject()).getString(R.string.pref_value_location));
+                    long weatherId = forcastObject.getJSONArray("weather").getJSONObject(0).getLong("id");
+                    String cityName = cityList.getString("name");
+                    double cityLatitude = cityList.getJSONObject("coord").getDouble("lat");
+                    double cityLongitude = cityList.getJSONObject("coord").getDouble("lon");
 
-                    formatHighLows(max,min,unitType);
-                    String toStore = day + " " + description + " " + formatHighLows(max,min,unitType);;
-                    listWeather.add(toStore);
+                    long locationId = addLocation(locationSetting,cityName,cityLatitude,cityLongitude);
+
+                    ContentValues weatherValues = new ContentValues();
+
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_LOC_KEY, locationId);
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_DATE, gregorianCalendar.getTime().getTime());
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_HUMIDITY, humidity);
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_PRESSURE, pressure);
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_WIND_SPEED, windSpeed);
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_DEGREES, windDirection);
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_MAX_TEMP, max);
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_MIN_TEMP, min);
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_SHORT_DESC, description);
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_WEATHER_ID, weatherId);
+
+                    cVVector.add(weatherValues);
+
                 }
+                int inserted = 0;
+                if ( cVVector.size() > 0 ) {
+                    ContentValues[] cvArray = new ContentValues[cVVector.size()];
+                    cVVector.toArray(cvArray);
+                    inserted = mContext.getContentResolver().bulkInsert(WeatherContract.WeatherEntry.CONTENT_URI, cvArray);
+                }
+
+                Log.d("Test", "FetchWeatherTask Complete. " + inserted + " Inserted");
+
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
-        return listWeather;
-    }
-
-    private String formatHighLows(double high, double low, String unitType) {
-
-        if (unitType.equals(((Activity)this.getObject()).getString(R.string.pref_units_imperial))) {
-            high = (high * 1.8) + 32;
-            low = (low * 1.8) + 32;
-        } else if (!unitType.equals(((Activity)this.getObject()).getString(R.string.pref_units_metric))) {
-            Log.d(Constants.TAG_ANDROID_HTTP_REQUEST, "Unit type not found: " + unitType);
-        }
-
-        // For presentation, assume the user doesn't care about tenths of a degree.
-        long roundedHigh = Math.round(high);
-        long roundedLow = Math.round(low);
-
-        return roundedHigh + "/" + roundedLow;
     }
 
 
-    private String getDayReadable(Date time) {
+
+    private String getDayReadable(Long time) {
         SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd", Locale.FRANCE);
         return shortenedDateFormat.format(time);
+    }
+
+
+    /**
+     * Helper method to handle insertion of a new location in the weather database.
+     *
+     * @param locationSetting The location string used to request updates from the server.
+     * @param cityName        A human-readable city name, e.g "Mountain View"
+     * @param lat             the latitude of the city
+     * @param lon             the longitude of the city
+     * @return the row ID of the added location.
+     */
+    public long addLocation(String locationSetting, String cityName, double lat, double lon) {
+        long locationId;
+
+        // First, check if the location with this city name exists in the db
+        Cursor locationCursor = mContext.getContentResolver().query(
+                WeatherContract.LocationEntry.CONTENT_URI,
+                new String[]{WeatherContract.LocationEntry._ID},
+                WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING + " = ?",
+                new String[]{locationSetting},
+                null);
+
+        if (locationCursor.moveToFirst()) {
+            int locationIdIndex = locationCursor.getColumnIndex(WeatherContract.LocationEntry._ID);
+            locationId = locationCursor.getLong(locationIdIndex);
+        } else {
+            // Now that the content provider is set up, inserting rows of data is pretty simple.
+            // First create a ContentValues object to hold the data you want to insert.
+            ContentValues locationValues = new ContentValues();
+
+            // Then add the data, along with the corresponding name of the data type,
+            // so the content provider knows what kind of value is being inserted.
+            locationValues.put(WeatherContract.LocationEntry.COLUMN_LOCATION_CITY_NAME, cityName);
+            locationValues.put(WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING, locationSetting);
+            locationValues.put(WeatherContract.LocationEntry.COLUMN_LOCATION_LATITUDE, lat);
+            locationValues.put(WeatherContract.LocationEntry.COLUMN_LOCATION_LONGITUDE, lon);
+
+            // Finally, insert location data into the database.
+            Uri insertedUri = mContext.getContentResolver().insert(
+                    WeatherContract.LocationEntry.CONTENT_URI,
+                    locationValues
+            );
+
+            // The resulting URI contains the ID for the row.  Extract the locationId from the Uri.
+            locationId = ContentUris.parseId(insertedUri);
+        }
+
+        locationCursor.close();
+        // Wait, that worked?  Yes!
+        return locationId;
     }
 }
