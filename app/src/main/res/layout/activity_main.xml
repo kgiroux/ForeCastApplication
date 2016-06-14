@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:id="@+id/container"
-    android:layout_height="match_parent"
+<fragment xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:id="@+id/fragment_forecast"
+    android:layout_height="match_parent"
+    android:name="com.giroux.kevin.forecastapplication.Fragment.ForecastFragment"
+    tools:context="com.giroux.kevin.forecastapplication.Fragment.ForecastFragment"
+    tools:layout="@android:layout/list_content"
     android:paddingTop="@dimen/activity_vertical_margin" />

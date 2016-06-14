@@ -6,6 +6,7 @@
     android:baselineAligned="false"
     android:padding="16dp"
     android:gravity="center_vertical"
+    android:background="@drawable/touch_selector"
     android:minHeight="?android:attr/listPreferredItemHeight"
     android:orientation="horizontal">
 

@@ -28,7 +28,6 @@ import com.giroux.kevin.forecastapplication.utils.AndroidHttpRequest;
 import com.giroux.kevin.forecastapplication.utils.ForecastAdapter;
 import com.giroux.kevin.forecastapplication.utils.Utility;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,8 +38,17 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     private ForecastAdapter  adapter;
     private final int FORECAST_LOADER = 1;
     private ListView listViewForecast;
+    private int mPosition = ListView.INVALID_POSITION;
+    private boolean mTodayLayout;
     public ForecastFragment(){
 
+    }
+
+    public void setTodayLayout(boolean todayLayout){
+        this.mTodayLayout = todayLayout;
+        if(adapter != null){
+            adapter.setTodayLayout(mTodayLayout);
+        }
     }
 
     private static final String[] FORECAST_COLUMNS = {
@@ -73,6 +81,20 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     public static final int COL_COORD_LAT = 7;
     public static final int COL_COORD_LONG = 8;
 
+
+    /**
+     * A callback interface that all activities containing this fragment must
+     * implement. This mechanism allows activities to be notified of item
+     * selections.
+     */
+    public interface Callback {
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+         */
+        public void onItemSelected(Uri dateUri);
+    }
+
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,7 +104,7 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.frag_main_activity,container,false);
+        View rootView = inflater.inflate(R.layout.forecast_fragment,container,false);
         // Sort order:  Ascending, by date.
         String sortOrder = WeatherContract.WeatherEntry.COLUMN_DATE + " ASC";
         String locationSetting = Utility.getPreferredLocation(getActivity());
@@ -93,8 +115,14 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         // However, we cannot use FLAG_AUTO_REQUERY since it is deprecated, so we will end
         // up with an empty list the first time we run.
         adapter = new ForecastAdapter(getActivity(), null, 0);
+        adapter.setTodayLayout(mTodayLayout);
         listViewForecast = (ListView) rootView.findViewById(R.id.listview_forecast);
         listViewForecast.setAdapter(adapter);
+
+        if(savedInstanceState != null && savedInstanceState.containsKey("location")){
+            mPosition = savedInstanceState.getInt("location",ListView.INVALID_POSITION);
+        }
+
         //http://api.openweathermap.org/data/2.5/forecast/daily?id=6444066&mode=json&units=metric&cnt=7&appid=2320d97c0bd0642e83e5f485369f61a5
 
         listViewForecast.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -102,10 +130,11 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Cursor cursor = (Cursor) parent.getItemAtPosition(position);
                 if(cursor != null){
+                    mPosition = position;
                     String locationSetting = Utility.getPreferredLocation(getContext());
-                    Intent t = new Intent(getActivity(),DetailActivity.class);
-                    t.setData(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(locationSetting,cursor.getLong(COL_WEATHER_DATE)));
-                    startActivity(t);
+                    ((Callback) getActivity()).onItemSelected(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
+                            locationSetting, cursor.getLong(COL_WEATHER_DATE)
+                    ));
                 }
             }
         });
@@ -202,10 +231,17 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         adapter.swapCursor(data);
+        listViewForecast.smoothScrollToPosition(mPosition);
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
         adapter.swapCursor(null);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        outState.putInt("position",mPosition);
+        super.onSaveInstanceState(outState);
     }
 }

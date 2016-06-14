@@ -446,7 +446,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
                     int windSpeed = forcastObject.getInt("speed");
                     int windDirection = forcastObject.getInt("deg");
 
-                    SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(((Activity)this.getObject()).getApplicationContext());    
+                    SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(((Activity)this.getObject()).getApplicationContext());
                     String locationSetting = sharedPrefs.getString(((Activity)this.getObject()).getString(R.string.pref_key_location),((Activity)this.getObject()).getString(R.string.pref_value_location));
                     long weatherId = forcastObject.getJSONArray("weather").getJSONObject(0).getLong("id");
                     String cityName = cityList.getString("name");
@@ -458,7 +458,7 @@ public class AndroidHttpRequest extends AsyncTask<String[], Void, Object> {
                     ContentValues weatherValues = new ContentValues();
 
                     weatherValues.put(WeatherContract.WeatherEntry.COLUMN_LOC_KEY, locationId);
-                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_DATE, gregorianCalendar.getTime().getTime());
+                    weatherValues.put(WeatherContract.WeatherEntry.COLUMN_DATE, gregorianCalendar.getTime().getTime()+1);
                     weatherValues.put(WeatherContract.WeatherEntry.COLUMN_HUMIDITY, humidity);
                     weatherValues.put(WeatherContract.WeatherEntry.COLUMN_PRESSURE, pressure);
                     weatherValues.put(WeatherContract.WeatherEntry.COLUMN_WIND_SPEED, windSpeed);

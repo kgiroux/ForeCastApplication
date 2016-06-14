@@ -2,6 +2,7 @@ package com.giroux.kevin.forecastapplication.Fragment;
 
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -33,9 +34,12 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     private static String FORECAST_SHARE_HASHTAG ="#SunshineAPP";
     private ShareActionProvider mShareActionProvider;
     private final int DETAIL_LOADER = 0;
+    public static final String DETAIL_URI = "URI";
+    private Uri mUri;
 
-    public DetailActivityFragment() {
-        setHasOptionsMenu(true);
+
+    public DetailActivityFragment(){
+            setHasOptionsMenu(true);
     }
 
     private static final String[] DETAIL_COLUMNS = {
@@ -96,7 +100,13 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+
+        Bundle arguments = getArguments();
+        if (arguments != null) {
+            mUri = arguments.getParcelable(DETAIL_URI);
+        }
+
+        View rootView = inflater.inflate(R.layout.detail_fragment, container, false);
         return rootView;
     }
 
@@ -111,13 +121,19 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        Log.v("LOADER", "Create loader");
-        Intent intent = getActivity().getIntent();
-        if (intent != null) {
-            return new CursorLoader(getActivity(), intent.getData(), DETAIL_COLUMNS, null, null, null);
-        } else
-            return null;
-
+        if ( null != mUri ) {
+            // Now create and return a CursorLoader that will take care of
+            // creating a Cursor for the data being displayed.
+            return new CursorLoader(
+                    getActivity(),
+                    mUri,
+                    DETAIL_COLUMNS,
+                    null,
+                    null,
+                    null
+            );
+        }
+        return null;
     }
 
     @Override
@@ -163,6 +179,16 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
 
     }
 
+
+    public void onLocationChange(String newLocation){
+        Uri uri = mUri;
+        if (null != uri) {
+            long date = WeatherContract.WeatherEntry.getDateFromUri(uri);
+            Uri updatedUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(newLocation, date);
+            mUri = updatedUri;
+            getLoaderManager().restartLoader(DETAIL_LOADER, null, this);
+        }
+    }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
